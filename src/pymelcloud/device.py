@@ -24,10 +24,10 @@ class Device(ABC):
     """MELCloud base device representation."""
 
     def __init__(
-        self,
-        device_conf: Dict[str, Any],
-        client: Client,
-        set_debounce=timedelta(seconds=1),
+            self,
+            device_conf: Dict[str, Any],
+            client: Client,
+            set_debounce=timedelta(seconds=1),
     ):
         """Initialize a device."""
         self.device_id = device_conf.get("DeviceID")
@@ -96,9 +96,7 @@ class Device(ABC):
         self._state = await self._client.fetch_device_state(self)
         self._energy_report = await self._client.fetch_energy_report(self)
 
-        if self._device_units is None and self.access_level != ACCESS_LEVEL.get(
-            "GUEST"
-        ):
+        if self._device_units is None:
             self._device_units = await self._client.fetch_device_units(self)
 
     async def set(self, properties: Dict[str, Any]):
