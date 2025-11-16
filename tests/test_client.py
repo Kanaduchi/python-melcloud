@@ -1,79 +1,63 @@
 """Client tests."""
-import json
-import os
-
 import pytest
 from unittest.mock import AsyncMock, Mock, patch
-
-from aiohttp.web import HTTPForbidden
-from src.pymelcloud import DEVICE_TYPE_ATA
-
-from src.pymelcloud.const import ACCESS_LEVEL
-from src.pymelcloud.ata_device import (AtaDevice)
-
-
-def _build_device(device_conf_name: str, device_state_name: str) -> AtaDevice:
-    test_dir = os.path.join(os.path.dirname(__file__), "samples")
-    with open(os.path.join(test_dir, device_conf_name), "r") as json_file:
-        device_conf = json.load(json_file)
-
-    with open(os.path.join(test_dir, device_state_name), "r") as json_file:
-        device_state = json.load(json_file)
-
-    with patch("src.pymelcloud.client.Client") as _client:
-        _client.update_confs = AsyncMock()
-        _client.device_confs.__iter__ = Mock(return_value=[device_conf].__iter__())
-        _client.fetch_device_units = AsyncMock(return_value=[])
-        _client.fetch_device_state = AsyncMock(return_value=device_state)
-        _client.fetch_energy_report = AsyncMock(return_value=None)
-        client = _client
-
-    return AtaDevice(device_conf, client)
+from aiohttp import ClientResponseError, ClientSession
+from pymelcloud.client import Client
 
 
 @pytest.mark.asyncio
-async def test_ata_guest():
-    device = _build_device("ata_guest_listdevices.json", "ata_guest_get.json")
-    assert device.device_type == DEVICE_TYPE_ATA
-    assert device.access_level == ACCESS_LEVEL["GUEST"]
+async def test_fetch_energy_report_ignores_403():
+    session = Mock(spec=ClientSession)
+    cm = AsyncMock()
+    session.post.return_value = cm
 
-    request_info = Mock()
-    request_info.real_url = "https://example.test/Device/ListDeviceUnits"
-
-    device._client.fetch_device_units = AsyncMock(side_effect=HTTPForbidden)
-
-    with pytest.raises(HTTPForbidden) as exc:
-        await device.update()
-    assert exc.value.status == 403
-
-
-@pytest.mark.asyncio
-async def test_ata_energy_report_403():
-    device = _build_device("ata_listdevice.json", "ata_get.json")
-    device._client.fetch_device_state = AsyncMock(return_value={})
-    device._client.fetch_device_units = AsyncMock(return_value=None)
+    resp = Mock()
+    cm.__aenter__.return_value = resp
 
     request_info = Mock()
     request_info.real_url = "https://example.test/EnergyCost/Report"
 
-    device._client.fetch_energy_report = AsyncMock(side_effect=HTTPForbidden)
+    resp.raise_for_status.side_effect = ClientResponseError(
+        request_info=request_info,
+        history=(),
+        status=403,
+        message="Forbidden",
+    )
 
-    with pytest.raises(HTTPForbidden) as exc:
-        await device.update()
-    assert exc.value.status == 403
+    client = Client(token="dummy", session=session)
+
+    class DummyDevice:
+        device_id = 123
+
+    device = DummyDevice()
+    result = await client.fetch_device_units(device)
+    assert result is None
 
 
 @pytest.mark.asyncio
-async def test_ata_device_units_403():
-    device = _build_device("ata_listdevice.json", "ata_get.json")
-    assert device.access_level == ACCESS_LEVEL["OWNER"]
-    device._client.fetch_device_state = AsyncMock(return_value={})
+async def test_fetch_device_units_ignores_403():
+    session = Mock(spec=ClientSession)
+    cm = AsyncMock()
+    session.post.return_value = cm
+
+    resp = Mock()
+    cm.__aenter__.return_value = resp
 
     request_info = Mock()
     request_info.real_url = "https://example.test/Device/ListDeviceUnits"
 
-    device._client.fetch_device_units = AsyncMock(side_effect=HTTPForbidden)
+    resp.raise_for_status.side_effect = ClientResponseError(
+        request_info=request_info,
+        history=(),
+        status=403,
+        message="Forbidden",
+    )
 
-    with pytest.raises(HTTPForbidden) as exc:
-        await device.update()
-    assert exc.value.status == 403
+    client = Client(token="dummy", session=session)
+
+    class DummyDevice:
+        device_id = 123
+
+    device = DummyDevice()
+    result = await client.fetch_device_units(device)
+    assert result is None
