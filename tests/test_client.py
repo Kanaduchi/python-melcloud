@@ -30,7 +30,7 @@ async def test_fetch_energy_report_ignores_403():
         device_id = 123
 
     device = DummyDevice()
-    result = await client.fetch_device_units(device)
+    result = await client.fetch_energy_report(device)
     assert result is None
 
 
