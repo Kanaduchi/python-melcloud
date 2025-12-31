@@ -1,7 +1,7 @@
 """MEL API access."""
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
-from aiohttp import ClientResponseError
+from aiohttp import ClientResponseError, ContentTypeError
 
 from aiohttp import ClientSession
 
@@ -182,7 +182,10 @@ class Client:
                 json={"deviceId": device.device_id}
             ) as resp:
                 resp.raise_for_status()
-                data = await resp.json()
+                try:
+                    data = await resp.json()
+                except ContentTypeError:
+                    return None
                 if isinstance(data, dict):
                     return data
                 return None
@@ -225,7 +228,10 @@ class Client:
                     }
             ) as resp:
                 resp.raise_for_status()
-                data = await resp.json()
+                try:
+                    data = await resp.json()
+                except ContentTypeError:
+                    return None
                 if isinstance(data, dict):
                     return data
                 return None
