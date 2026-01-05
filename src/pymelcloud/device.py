@@ -24,10 +24,10 @@ class Device(ABC):
     """MELCloud base device representation."""
 
     def __init__(
-            self,
-            device_conf: Dict[str, Any],
-            client: Client,
-            set_debounce=timedelta(seconds=1),
+        self,
+        device_conf: Dict[str, Any],
+        client: Client,
+        set_debounce=timedelta(seconds=1),
     ):
         """Initialize a device."""
         self.device_id = device_conf.get("DeviceID")
