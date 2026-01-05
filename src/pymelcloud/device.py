@@ -96,7 +96,9 @@ class Device(ABC):
         self._state = await self._client.fetch_device_state(self)
         self._energy_report = await self._client.fetch_energy_report(self)
 
-        if self._device_units is None:
+        if self._device_units is None and self.access_level != ACCESS_LEVEL.get(
+            "GUEST"
+        ):
             self._device_units = await self._client.fetch_device_units(self)
 
     async def set(self, properties: Dict[str, Any]):
